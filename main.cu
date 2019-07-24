@@ -4,13 +4,13 @@
 //# include <cuda_runtime.h>
 //# include <cusolverDn.h>
 //#include <Windows.h>
-#include "itkImage.h"
-#include "itksys/SystemTools.hxx"
-#include <iostream>
-#include <fstream>
-#include "itkImageFileReader.h"
-#include "itkHessianRecursiveGaussianImageFilter.h"
-#include "itkTimeProbe.h"
+// #include "itkImage.h"
+// #include "itksys/SystemTools.hxx"
+// #include <iostream>
+// #include <fstream>
+// #include "itkImageFileReader.h"
+// #include "itkHessianRecursiveGaussianImageFilter.h"
+// #include "itkTimeProbe.h"
 //#include "itkImageRegionConstIterator.h"
 ////
 ////
@@ -165,7 +165,8 @@
 ////	cudaFree(d_work);
 ////	cusolverDnDestroy(cusolverH);
 ////	cudaDeviceReset();
-////	return 0;////
+////	return 0;
+////
 ////}
 ////
 ////int calc(const itk::SymmetricSecondRankTensor< ImageType::PixelType, ImageType::ImageDimension > *image)
@@ -812,7 +813,21 @@ __global__ void addone(V3x3 *a,int size) {
 	}
 }
 
+/*
 
+a b c
+d e f
+g h i
+a[0] a[1] a[2]
+a[3] a[4] a[5]
+a[6] a[7] a[8]
+
+三次项：1 
+二次项：-(a+e+i)
+一次项：ae+ei+ai-cg-bd-fh
+常数项：ceg+bdi+afh-aei-bfg-cdh
+
+*/
 int main()
 {
 	int size = 5000;
@@ -833,13 +848,23 @@ int main()
 
 	dim3 grid(50, 1, 1), block(32, 33, 1);
 
-	itk::TimeProbe time;
-	time.Start();
+//	itk::TimeProbe time;
+//	time.Start();
 	std::cout << " start" << std::endl;
 	addone << <grid, block >> > (a_cuda,size);
-	time.Stop();
-	std::cout << " eigen value test takes: " << time.GetMean() << " seconds" << std::endl;
+//	time.Stop();
+//	std::cout << " eigen value test takes: " << time.GetMean() << " seconds" << std::endl;
 	cudaMemcpy(a, a_cuda, sizeof(V3x3)*size*size, cudaMemcpyDeviceToHost);
 	//MatrixPrint(a, size, size);
+
+	float  vec[] = {
+		4, 2, -5,
+		6, 4, -9,
+		5, 3, -7
+	};
+	std::cout << "三次项: " << 1 << std::endl;
+	std::cout << "二次项: " << -1 * (vec[0] + vec[4] + vec[8]) << std::endl;
+	std::cout << "一次项: " << (vec[0] * vec[4] + vec[4] * vec[8] + vec[0] * vec[8] - vec[2] * vec[6] - vec[1] * vec[3] - vec[5] * vec[7]) <<std::endl;
+	std::cout << "常数项: " << (vec[2] * vec[4] * vec[6] + vec[1] * vec[3] * vec[8] + vec[0] * vec[5] * vec[7] - vec[0] * vec[4] * vec[8] - vec[1] * vec[5] * vec[6] - vec[2] * vec[3] * vec[7]) << std::endl;
 	return 0;
 }
